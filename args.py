@@ -5,13 +5,13 @@ class Args():
         ### if clean tensorboard
         self.clean_tensorboard = False
         ### Which CUDA GPU device is used for training
-        self.cuda = 1
+        self.cuda = 0
 
         ### Which GraphRNN model variant is used.
         # The simple version of Graph RNN
-        # self.note = 'GraphRNN_MLP'
+        self.note = 'GraphRNN_MLP'
         # The dependent Bernoulli sequence version of GraphRNN
-        self.note = 'GraphRNN_RNN'
+        #self.note = 'GraphRNN_RNN'
 
         ## for comparison, removing the BFS compoenent
         # self.note = 'GraphRNN_MLP_nobfs'
@@ -22,8 +22,8 @@ class Args():
         # self.graph_type = 'caveman'
         # self.graph_type = 'caveman_small'
         # self.graph_type = 'caveman_small_single'
-        # self.graph_type = 'community4'
-        self.graph_type = 'grid'
+        self.graph_type = 'community2'
+        #self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
 
@@ -71,14 +71,14 @@ class Args():
         self.epochs_save = 100
 
         self.lr = 0.003
-        self.milestones = [400, 1000]
+        self.milestones = [400 * 32, 1000 * 32]
         self.lr_rate = 0.3
 
         self.sample_time = 2 # sample time in each time step, when validating
 
         ### output config
         # self.dir_input = "/dfs/scratch0/jiaxuany0/"
-        self.dir_input = "./"
+        self.dir_input = "./out/"
         self.model_save_path = self.dir_input+'model_save/' # only for nll evaluation
         self.graph_save_path = self.dir_input+'graphs/'
         self.figure_save_path = self.dir_input+'figures/'

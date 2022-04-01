@@ -3,6 +3,7 @@ import numpy as np
 import os
 import re
 from random import shuffle
+from tqdm import tqdm
 
 import eval.stats
 import utils
@@ -14,12 +15,14 @@ class Args_evaluate():
         # loop over the settings
         # self.model_name_all = ['GraphRNN_MLP','GraphRNN_RNN','Internal','Noise']
         # self.model_name_all = ['E-R', 'B-A']
-        self.model_name_all = ['GraphRNN_RNN']
+        #self.model_name_all = ['GraphRNN_RNN']
+        self.model_name_all = ['GraphRNN_MLP']
         # self.model_name_all = ['Baseline_DGMG']
 
         # list of dataset to evaluate
         # use a list of 1 element to evaluate a single dataset
-        self.dataset_name_all = ['caveman', 'grid', 'barabasi', 'citeseer', 'DD']
+        #self.dataset_name_all = ['caveman', 'grid', 'barabasi', 'citeseer', 'DD']
+        self.dataset_name_all = ['grid']
         # self.dataset_name_all = ['citeseer_small','caveman_small']
         # self.dataset_name_all = ['barabasi_noise0','barabasi_noise2','barabasi_noise4','barabasi_noise6','barabasi_noise8','barabasi_noise10']
         # self.dataset_name_all = ['caveman_small', 'ladder_small', 'grid_small', 'ladder_small', 'enzymes_small', 'barabasi_small','citeseer_small']
@@ -201,7 +204,7 @@ def evaluation_epoch(dir_input, fname_output, model_name, dataset_name, args, is
         # get performance for proposed approaches
         if 'GraphRNN' in model_name:
             # read test graph
-            for epoch in range(epoch_start,epoch_end,epoch_step):
+            for epoch in tqdm(range(epoch_start,epoch_end,epoch_step)):
                 for sample_time in range(1,4):
                     # get filename
                     fname_pred = dir_input + model_name + '_' + dataset_name + '_' + str(args.num_layers) + '_' + str(hidden) + '_pred_' + str(epoch) + '_' + str(sample_time) + '.dat'

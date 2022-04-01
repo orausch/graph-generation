@@ -8,7 +8,7 @@
 static PyObject *
 orca_motifs(PyObject *self, PyObject *args)
 {
-    const char *orbit_type;
+    char *orbit_type;
     int graphlet_size;
     const char *input_filename;
     const char *output_filename;

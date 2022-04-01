@@ -1,8 +1,11 @@
 from train import *
+import wandb
 
 if __name__ == '__main__':
+    wandb.init(project="graphrnn-reproduction", entity="graphnn-reproduction", job_type="original_community")
     # All necessary arguments are defined in args.py
     args = Args()
+
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.cuda)
     print('CUDA', args.cuda)
     print('File name prefix',args.fname)
@@ -28,6 +31,7 @@ if __name__ == '__main__':
     configure("tensorboard/run"+time, flush_secs=5)
 
     graphs = create_graphs.create(args)
+    wandb.config.update(args.__dict__)
     
     # split datasets
     random.seed(123)

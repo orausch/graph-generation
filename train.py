@@ -1,4 +1,5 @@
 import networkx as nx
+import wandb
 import numpy as np
 import torch
 import torch.nn as nn
@@ -20,6 +21,8 @@ import pickle
 from tensorboard_logger import configure, log_value
 import scipy.misc
 import time as tm
+from tqdm import tqdm
+from torch.cuda import nvtx
 
 from utils import *
 from model import *
@@ -183,6 +186,7 @@ def train_mlp_epoch(epoch, args, rnn, output, data_loader,
     rnn.train()
     output.train()
     loss_sum = 0
+    start_time = time.time()
     for batch_idx, data in enumerate(data_loader):
         rnn.zero_grad()
         output.zero_grad()
@@ -225,6 +229,20 @@ def train_mlp_epoch(epoch, args, rnn, output, data_loader,
 
         # logging
         log_value('loss_'+args.fname, loss.data[0], epoch*args.batch_ratio+batch_idx)
+        # log learning rates
+        lr_rnn = optimizer_rnn.param_groups[0]['lr']
+        lr_output = optimizer_output.param_groups[0]['lr']
+        log_value('lr_rnn', lr_rnn, epoch*args.batch_ratio+batch_idx)
+        log_value('lr_output', lr_output, epoch*args.batch_ratio+batch_idx)
+
+        wandb.log(
+            dict(
+                loss=loss.item(),
+                lr_rnn=lr_rnn,
+                lr_output=lr_output,
+            ),
+            #step=epoch*args.batch_ratio+batch_idx
+        )
 
         loss_sum += loss.data[0]
     return loss_sum/(batch_idx+1)
@@ -665,52 +683,54 @@ def train(args, dataset_train, rnn, output):
 
     # start main loop
     time_all = np.zeros(args.epochs)
-    while epoch<=args.epochs:
-        time_start = tm.time()
-        # train
-        if 'GraphRNN_VAE' in args.note:
-            train_vae_epoch(epoch, args, rnn, output, dataset_train,
-                            optimizer_rnn, optimizer_output,
-                            scheduler_rnn, scheduler_output)
-        elif 'GraphRNN_MLP' in args.note:
-            train_mlp_epoch(epoch, args, rnn, output, dataset_train,
-                            optimizer_rnn, optimizer_output,
-                            scheduler_rnn, scheduler_output)
-        elif 'GraphRNN_RNN' in args.note:
-            train_rnn_epoch(epoch, args, rnn, output, dataset_train,
-                            optimizer_rnn, optimizer_output,
-                            scheduler_rnn, scheduler_output)
-        time_end = tm.time()
-        time_all[epoch - 1] = time_end - time_start
-        # test
-        if epoch % args.epochs_test == 0 and epoch>=args.epochs_test_start:
-            for sample_time in range(1,4):
-                G_pred = []
-                while len(G_pred)<args.test_total_size:
-                    if 'GraphRNN_VAE' in args.note:
-                        G_pred_step = test_vae_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size,sample_time=sample_time)
-                    elif 'GraphRNN_MLP' in args.note:
-                        G_pred_step = test_mlp_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size,sample_time=sample_time)
-                    elif 'GraphRNN_RNN' in args.note:
-                        G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
-                    G_pred.extend(G_pred_step)
-                # save graphs
-                fname = args.graph_save_path + args.fname_pred + str(epoch) +'_'+str(sample_time) + '.dat'
-                save_graph_list(G_pred, fname)
-                if 'GraphRNN_RNN' in args.note:
-                    break
-            print('test done, graphs saved')
+    with tqdm(total=args.epochs) as pbar:
+        while epoch<=args.epochs:
+            pbar.update()
+            time_start = tm.time()
+            # train
+            if 'GraphRNN_VAE' in args.note:
+                train_vae_epoch(epoch, args, rnn, output, dataset_train,
+                                optimizer_rnn, optimizer_output,
+                                scheduler_rnn, scheduler_output)
+            elif 'GraphRNN_MLP' in args.note:
+                train_mlp_epoch(epoch, args, rnn, output, dataset_train,
+                                optimizer_rnn, optimizer_output,
+                                scheduler_rnn, scheduler_output)
+            elif 'GraphRNN_RNN' in args.note:
+                train_rnn_epoch(epoch, args, rnn, output, dataset_train,
+                                optimizer_rnn, optimizer_output,
+                                scheduler_rnn, scheduler_output)
+            time_end = tm.time()
+            time_all[epoch - 1] = time_end - time_start
+            # test
+            if epoch % args.epochs_test == 0 and epoch>=args.epochs_test_start:
+                for sample_time in range(1,4):
+                    G_pred = []
+                    while len(G_pred)<args.test_total_size:
+                        if 'GraphRNN_VAE' in args.note:
+                            G_pred_step = test_vae_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size,sample_time=sample_time)
+                        elif 'GraphRNN_MLP' in args.note:
+                            G_pred_step = test_mlp_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size,sample_time=sample_time)
+                        elif 'GraphRNN_RNN' in args.note:
+                            G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
+                        G_pred.extend(G_pred_step)
+                    # save graphs
+                    fname = args.graph_save_path + args.fname_pred + str(epoch) +'_'+str(sample_time) + '.dat'
+                    save_graph_list(G_pred, fname)
+                    if 'GraphRNN_RNN' in args.note:
+                        break
+                print('test done, graphs saved')
 
 
-        # save model checkpoint
-        if args.save:
-            if epoch % args.epochs_save == 0:
-                fname = args.model_save_path + args.fname + 'lstm_' + str(epoch) + '.dat'
-                torch.save(rnn.state_dict(), fname)
-                fname = args.model_save_path + args.fname + 'output_' + str(epoch) + '.dat'
-                torch.save(output.state_dict(), fname)
-        epoch += 1
-    np.save(args.timing_save_path+args.fname,time_all)
+            # save model checkpoint
+            if args.save:
+                if epoch % args.epochs_save == 0:
+                    fname = args.model_save_path + args.fname + 'lstm_' + str(epoch) + '.dat'
+                    torch.save(rnn.state_dict(), fname)
+                    fname = args.model_save_path + args.fname + 'output_' + str(epoch) + '.dat'
+                    torch.save(output.state_dict(), fname)
+            epoch += 1
+        np.save(args.timing_save_path+args.fname,time_all)
 
 
 ########### for graph completion task

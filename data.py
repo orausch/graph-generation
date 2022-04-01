@@ -1,5 +1,5 @@
 import torch
-import torchvision as tv
+import torch.utils.data
 import torch.nn as nn
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
