@@ -5,7 +5,7 @@ class Args():
         ### if clean tensorboard
         self.clean_tensorboard = False
         ### Which CUDA GPU device is used for training
-        self.cuda = 0
+        #self.cuda = 0
 
         ### Which GraphRNN model variant is used.
         # The simple version of Graph RNN
@@ -22,8 +22,8 @@ class Args():
         # self.graph_type = 'caveman'
         # self.graph_type = 'caveman_small'
         # self.graph_type = 'caveman_small_single'
-        self.graph_type = 'community2'
-        #self.graph_type = 'grid'
+        #self.graph_type = 'community2'
+        self.graph_type = 'grid'
         # self.graph_type = 'grid_small'
         # self.graph_type = 'ladder_small'
 
